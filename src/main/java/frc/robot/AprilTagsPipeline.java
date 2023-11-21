@@ -11,11 +11,16 @@ import edu.wpi.first.cameraserver.CameraServer;
 import java.util.HashSet;
 
 public class AprilTagsPipeline {
+    private static int outputWidth = 320; // Old: 640
+    private static int outputHeight = 240; // Old: 480
+    private static Point point0 = new Point(0, 0);
+    private static Point point1 = new Point(0, 0);
+    private static Point point2 = new Point(0, 0);
+    private static Point point3 = new Point(0, 0);
+    private static Point frameCenter = new Point(0, 0);
     
     static void aprilTagVisionProc() {
         var camera = CameraServer.startAutomaticCapture();
-        var outputWidth = 640;
-        var outputHeight = 480;
     
         camera.setResolution(outputWidth, outputHeight);
         var cvSink = CameraServer.getVideo();
@@ -24,13 +29,15 @@ public class AprilTagsPipeline {
         var mat = new Mat();
         var grayScaleMat = new Mat();
     
-        var point0 = new Point();
-        var point1 = new Point();
-        var point2 = new Point();
-        var point3 = new Point();
-        var frameCenter = new Point();
+        point0 = new Point();
+        point1 = new Point();
+        point2 = new Point();
+        point3 = new Point();
+        frameCenter = new Point();
+
         var blue = new Scalar(0, 0, 255);
         var red = new Scalar(255, 0, 0);
+        // var black = new Scalar(0, 0, 0);
     
         var aprilTagDetector = new AprilTagDetector();
     
@@ -59,7 +66,7 @@ public class AprilTagsPipeline {
           var resultIds = new HashSet<>();
     
           for (var result: results) {
-            point0.x = result.getCornerX(0);
+            point0.x = result.getCornerX(0); // Bottom Left => Counterclockwise
             point1.x = result.getCornerX(1);
             point2.x = result.getCornerX(2);
             point3.x = result.getCornerX(3);
@@ -74,15 +81,28 @@ public class AprilTagsPipeline {
     
             resultIds.add(result.getId());
     
-            Imgproc.line(mat, point0, point1, blue, 3);
-            Imgproc.line(mat, point1, point2, blue, 3);
-            Imgproc.line(mat, point2, point3, blue, 3);
-            Imgproc.line(mat, point3, point0, blue, 3);
-            Imgproc.putText(mat, String.valueOf(result.getId()), frameCenter, Imgproc.FONT_HERSHEY_COMPLEX, 5, red, 10);
+            Imgproc.line(grayScaleMat, point0, point1, blue, 3);
+            Imgproc.line(grayScaleMat, point1, point2, blue, 3);
+            Imgproc.line(grayScaleMat, point2, point3, blue, 3);
+            Imgproc.line(grayScaleMat, point3, point0, blue, 3);
+
+            Imgproc.putText(grayScaleMat, String.valueOf(result.getId()), frameCenter, Imgproc.FONT_HERSHEY_COMPLEX, 8, red, 10);
           }
-          outputStream.putFrame(mat);
+          outputStream.putFrame(grayScaleMat);
         }
         aprilTagDetector.close();
+      }
+
+      public static double aprilTagCenterX() {
+        return point0.x + point2.x / 2.0;
+      }
+
+      public static double frameCenterX() {
+        return 240;
+      }
+
+      public static double aprilTagWidth() {
+        return Math.abs(point0.x - point2.x);
       }
 
 }
